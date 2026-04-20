@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:uts_1123150004/core/routes/app_router.dart';
 import 'package:uts_1123150004/features/auth/presentation/providers/auth_provider.dart';
+import 'package:uts_1123150004/features/cart/presentation/pages/cart_page.dart';
+import 'package:uts_1123150004/features/cart/presentation/providers/cart_provider.dart';
 import 'package:uts_1123150004/features/dashboard/presentation/providers/product_provider.dart';
 
 
