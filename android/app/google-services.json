@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1086243048083",
+    "project_id": "sepatu-futsal",
+    "storage_bucket": "sepatu-futsal.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1086243048083:android:5e8b559576d4833e66db66",
+        "android_client_info": {
+          "package_name": "com.example.uts_1123150004"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBbAJ-odnQ3a58iHlqp5qo5k8DMUn7ONI8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
