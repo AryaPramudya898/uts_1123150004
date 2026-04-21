@@ -153,7 +153,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           Text(
                             'Rp ${p.price.toStringAsFixed(0)}',
                             style: const TextStyle(
-                              color: Color(0xFF1565C0),
+                              color: Color(0xFF4CAF50),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -164,14 +164,14 @@ class _DashboardPageState extends State<DashboardPage> {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
+                              color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
                               p.category,
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: Color(0xFF1565C0),
+                                color: Color(0xFF4CAF50),
                               ),
                             ),
                           ),
