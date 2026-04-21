@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:uts_1123150004/core/constants/app_colors.dart';
 import '../providers/cart_provider.dart';
 import 'payment_success_page.dart';
 
@@ -50,9 +51,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Checkout'),
+          title: const Text('Konfirmasi Pesanan'),
           centerTitle: true,
           automaticallyImplyLeading: !_isProcessing,
+          elevation: 2,
         ),
         body: Consumer<CartProvider>(
           builder: (context, cartProvider, _) {
@@ -61,11 +63,26 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey),
-                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: AppColors.lightGreen50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.shopping_cart_outlined,
+                        size: 80,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     const Text(
                       'Tidak Ada Item di Keranjang',
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ],
                 ),
@@ -79,24 +96,100 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     // Header Checkout Info
                     Container(
                       padding: const EdgeInsets.all(16),
-                      color: Colors.blue[50],
+                      decoration: BoxDecoration(
+                        color: AppColors.lightGreen50,
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(16),
+                          bottomRight: Radius.circular(16),
+                        ),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Ringkasan Pesanan',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 12),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Total Item: ${cartProvider.itemCount}'),
-                              Text(
-                                'Rp ${cartProvider.totalPrice.toStringAsFixed(0)}',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.receipt_long,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Ringkasan Pesanan',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Total Item',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${cartProvider.itemCount} item',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 30,
+                                  color: AppColors.divider,
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      'Total Harga',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Rp ${cartProvider.totalPrice.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -104,25 +197,36 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     // Item List
                     Expanded(
                       child: ListView.builder(
+                        padding: const EdgeInsets.all(12),
                         itemCount: cartProvider.items.length,
                         itemBuilder: (context, index) {
                           final item = cartProvider.items[index];
                           return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            margin: const EdgeInsets.only(bottom: 8),
                             child: Padding(
                               padding: const EdgeInsets.all(12),
                               child: Row(
                                 children: [
                                   Container(
-                                    width: 60,
-                                    height: 60,
+                                    width: 70,
+                                    height: 70,
                                     decoration: BoxDecoration(
-                                      color: Colors.grey[300],
+                                      color: AppColors.lightGreen50,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: item.imageUrl != null
-                                        ? Image.network(item.imageUrl!, fit: BoxFit.cover)
-                                        : const Icon(Icons.image, color: Colors.grey),
+                                        ? Image.network(
+                                            item.imageUrl!,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : const Icon(
+                                            Icons.image,
+                                            color: AppColors.primary,
+                                          ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -134,22 +238,51 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                           style: const TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.bold,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Qty: ${item.quantity}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.textSecondary,
                                           ),
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Qty: ${item.quantity} x Rp ${item.price.toStringAsFixed(0)}',
-                                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                          'Rp ${item.price.toStringAsFixed(0)}/item',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.textSecondary,
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                  Text(
-                                    'Rp ${item.totalPrice.toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Text(
+                                        'Subtotal',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Rp ${item.totalPrice.toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -162,8 +295,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        border: Border(top: BorderSide(color: Colors.grey[300]!)),
+                        color: Colors.white,
+                        border: Border(
+                          top: BorderSide(
+                            color: AppColors.border,
+                            width: 1,
+                          ),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            offset: const Offset(0, -2),
+                            blurRadius: 8,
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -172,41 +317,49 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text(
-                                'Total Harga:',
+                                'Total Pembayaran:',
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: AppColors.textSecondary,
                                 ),
                               ),
                               Text(
                                 'Rp ${cartProvider.totalPrice.toStringAsFixed(0)}',
                                 style: const TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.green,
+                                  color: AppColors.primary,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: _isProcessing ? null : _processCheckout,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                             child: _isProcessing
                                 ? const SizedBox(
                                     height: 24,
                                     width: 24,
                                     child: CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      valueColor:
+                                          AlwaysStoppedAnimation<Color>(Colors.white),
                                       strokeWidth: 2,
                                     ),
                                   )
                                 : const Text(
-                                    'Checkout',
-                                    style: TextStyle(fontSize: 16, color: Colors.white),
+                                    'Konfirmasi & Bayar',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                           ),
                         ],
