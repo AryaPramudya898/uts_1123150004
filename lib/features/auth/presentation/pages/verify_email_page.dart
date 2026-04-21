@@ -85,7 +85,6 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                 title: 'Verifikasi Email Kamu',
                 subtitle:
                     'Kami sudah mengirim link verifikasi ke email di bawah ini.',
-                iconColor: Colors.orange,
               ),
               const SizedBox(height: 24),
 
