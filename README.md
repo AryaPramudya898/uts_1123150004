@@ -18,4 +18,4 @@
 > Software Engineer
 >
 > **Link YouTube**  
-> [Coba Klik]([https://youtu.be/690s7cxgKmI](https://youtu.be/wxi41Vlb-7s?si=psySn-5i_Zyg4VDX)
+> [Coba Klik](https://youtu.be/wxi41Vlb-7s?si=psySn-5i_Zyg4VDX)
