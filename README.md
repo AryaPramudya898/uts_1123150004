@@ -1,16 +1,21 @@
-# uts_1123150004
+# Profil
 
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+> **Informasi Mahasiswa**
+>
+> **Nama**  
+> Arya Pramudya Akbar
+>
+> **NIM**  
+> 1123150004
+>
+> **Kelas**  
+> TI 23 SE 1
+>
+> **Prodi**  
+> Teknik Informatika
+>
+> **Konsentrasi**  
+> Software Engineer
+>
+> **Link YouTube**  
+> [Coba Klik]([https://youtu.be/690s7cxgKmI](https://youtu.be/wxi41Vlb-7s?si=psySn-5i_Zyg4VDX)
