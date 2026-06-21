@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:uts_1123150004/core/constants/app_colors.dart';
 import 'package:uts_1123150004/core/routes/app_router.dart';
 import 'package:uts_1123150004/core/services/secure_storage.dart';
@@ -124,6 +125,10 @@ class _ProfileTabState extends State<ProfileTab> {
         }
       }
     } else {
+      final bool isInstalled = await canLaunchUrl(Uri.parse('dompetkampus://pay'));
+
+      if (!mounted) return;
+
       showModalBottomSheet(
         context: context,
         shape: const RoundedRectangleBorder(
@@ -156,13 +161,15 @@ class _ProfileTabState extends State<ProfileTab> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Hubungkan Coach E-Money',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              Text(
+                isInstalled ? 'Hubungkan Coach E-Money' : 'Instal Coach E-Money',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
               const SizedBox(height: 8),
               Text(
-                'Hubungkan akun belanja Anda dengan Coach E-Money untuk mempermudah transaksi pembayaran secara instan.',
+                isInstalled
+                    ? 'Aplikasi Coach E-Money ditemukan di perangkat Anda. Hubungkan sekarang untuk mempermudah transaksi secara instan.'
+                    : 'Aplikasi Coach E-Money belum terpasang di perangkat Anda. Silakan unduh terlebih dahulu untuk menikmati kemudahan pembayaran instan.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
               ),
@@ -172,41 +179,53 @@ class _ProfileTabState extends State<ProfileTab> {
                 child: ElevatedButton(
                   onPressed: () async {
                     Navigator.pop(context);
-                    showDialog(
-                      context: this.context,
-                      barrierDismissible: false,
-                      builder: (context) => const Center(
-                        child: Card(
-                          margin: EdgeInsets.all(32),
-                          child: Padding(
-                            padding: EdgeInsets.all(24),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                CircularProgressIndicator(color: AppColors.primary),
-                                SizedBox(height: 16),
-                                Text(
-                                  'Menghubungkan ke Coach E-Money...',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                              ],
+                    if (isInstalled) {
+                      // Open the e-money app via deep link
+                      await launchUrl(Uri.parse('dompetkampus://pay'), mode: LaunchMode.externalApplication);
+                      
+                      // Simulate loading and connect
+                      showDialog(
+                        context: this.context,
+                        barrierDismissible: false,
+                        builder: (context) => const Center(
+                          child: Card(
+                            margin: EdgeInsets.all(32),
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircularProgressIndicator(color: AppColors.primary),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'Menghubungkan ke Coach E-Money...',
+                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                    await Future.delayed(const Duration(seconds: 2));
-                    if (this.mounted) {
-                      Navigator.pop(this.context);
-                      await SecureStorage.setWalletConnected(true);
-                      setState(() {
-                        _isWalletConnected = true;
-                      });
-                      ScaffoldMessenger.of(this.context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Berhasil terhubung ke Coach E-Money!'),
-                          backgroundColor: AppColors.primary,
-                        ),
+                      );
+                      await Future.delayed(const Duration(seconds: 2));
+                      if (this.mounted) {
+                        Navigator.pop(this.context);
+                        await SecureStorage.setWalletConnected(true);
+                        setState(() {
+                          _isWalletConnected = true;
+                        });
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Berhasil terhubung ke Coach E-Money!'),
+                            backgroundColor: AppColors.primary,
+                          ),
+                        );
+                      }
+                    } else {
+                      // Suggest download - redirect to Play Store search or mock download page
+                      await launchUrl(
+                        Uri.parse('https://play.google.com/store/apps'),
+                        mode: LaunchMode.externalApplication,
                       );
                     }
                   },
@@ -216,7 +235,10 @@ class _ProfileTabState extends State<ProfileTab> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Hubungkan Sekarang', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    isInstalled ? 'Masuk dengan Coach E-Money' : 'Unduh Coach E-Money',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ],
@@ -405,7 +427,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Hubungkan Akun ke Wallet',
+                    'Hubungkan dengan E-Money',
                     style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
                   const SizedBox(height: 2),
