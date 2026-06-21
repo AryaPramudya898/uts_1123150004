@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String baseUrl = 'http://localhost:8080/v1';
+  static const String baseUrl = 'http://192.168.8.196:8081/v1';
 
   // Auth endpoints
   static const String verifyToken = '/auth/verify-token';
