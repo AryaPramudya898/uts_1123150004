@@ -16,10 +16,11 @@ class NotificationService {
   /// Inisialisasi notifikasi lokal
   static Future<void> init() async {
     // Buat notification channel di Android
-    await _notificationsPlugin
+    final androidImplementation = _notificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(_channel);
+            AndroidFlutterLocalNotificationsPlugin>();
+            
+    await androidImplementation?.createNotificationChannel(_channel);
 
     // Konfigurasi inisialisasi Android
     const AndroidInitializationSettings androidSettings =
@@ -40,6 +41,9 @@ class NotificationService {
     await _notificationsPlugin.initialize(
       initSettings,
     );
+
+    // Minta izin runtime untuk Android 13+ (API 33+)
+    await androidImplementation?.requestNotificationsPermission();
   }
 
   /// Menampilkan notifikasi lokal

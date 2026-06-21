@@ -130,12 +130,6 @@ class HomeTab extends StatelessWidget {
                                     p.price,
                                     imageUrl: p.imageUrl,
                                   );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('${p.name} ditambahkan ke keranjang'),
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
