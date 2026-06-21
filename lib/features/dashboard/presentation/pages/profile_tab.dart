@@ -21,11 +21,13 @@ class _ProfileTabState extends State<ProfileTab> {
   bool _biometricEnabled = false;
   bool _isBiometricSupported = false;
   bool _isLoading = true;
+  bool _isWalletConnected = false;
 
   @override
   void initState() {
     super.initState();
     _checkBiometricStatus();
+    _loadWalletStatus();
   }
 
   Future<void> _checkBiometricStatus() async {
@@ -36,6 +38,15 @@ class _ProfileTabState extends State<ProfileTab> {
         _isBiometricSupported = available;
         _biometricEnabled = enabled;
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadWalletStatus() async {
+    final connected = await SecureStorage.isWalletConnected();
+    if (mounted) {
+      setState(() {
+        _isWalletConnected = connected;
       });
     }
   }
@@ -75,6 +86,134 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _toggleWalletConnection() async {
+    if (_isWalletConnected) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Putuskan Dompet?'),
+          content: const Text('Apakah Anda yakin ingin memutuskan hubungan akun dengan Coach E-Money?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Putuskan'),
+            ),
+          ],
+        ),
+      );
+      if (confirm == true) {
+        await SecureStorage.setWalletConnected(false);
+        setState(() {
+          _isWalletConnected = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Hubungan Coach E-Money diputuskan'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } else {
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) => Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.account_balance_wallet_rounded,
+                  size: 40,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Hubungkan Coach E-Money',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Hubungkan akun belanja Anda dengan Coach E-Money untuk mempermudah transaksi pembayaran secara instan.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    showDialog(
+                      context: this.context,
+                      barrierDismissible: false,
+                      builder: (context) => const Center(
+                        child: Card(
+                          margin: EdgeInsets.all(32),
+                          child: Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(color: AppColors.primary),
+                                SizedBox(height: 16),
+                                Text(
+                                  'Menghubungkan ke Coach E-Money...',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                    await Future.delayed(const Duration(seconds: 2));
+                    if (this.mounted) {
+                      Navigator.pop(this.context);
+                      await SecureStorage.setWalletConnected(true);
+                      setState(() {
+                        _isWalletConnected = true;
+                      });
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Berhasil terhubung ke Coach E-Money!'),
+                          backgroundColor: AppColors.primary,
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Hubungkan Sekarang', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
   }
 
@@ -141,28 +280,14 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           const SizedBox(height: 32),
 
-          // Menu Informasi Profil
+          // Hubungkan Akun ke Wallet
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.grey.shade100, width: 1.5),
             ),
-            child: Column(
-              children: [
-                _buildProfileItem(
-                  icon: Icons.person_outline,
-                  title: 'Nama Lengkap',
-                  value: widget.name,
-                ),
-                const Divider(height: 1, indent: 56),
-                _buildProfileItem(
-                  icon: Icons.email_outlined,
-                  title: 'Email',
-                  value: widget.email,
-                ),
-              ],
-            ),
+            child: _buildWalletItem(),
           ),
 
           const SizedBox(height: 24),
@@ -229,6 +354,57 @@ class _ProfileTabState extends State<ProfileTab> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildWalletItem() {
+    return InkWell(
+      onTap: _toggleWalletConnection,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _isWalletConnected ? AppColors.primary.withOpacity(0.1) : Colors.grey.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.account_balance_wallet_outlined,
+                size: 22,
+                color: _isWalletConnected ? AppColors.primary : Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Hubungkan Akun ke Wallet',
+                    style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _isWalletConnected ? 'Terhubung (Coach E-Money)' : 'Belum terhubung dengan e-money',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: _isWalletConnected ? AppColors.primary : Colors.grey.shade400,
+                      fontWeight: _isWalletConnected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              _isWalletConnected ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
+              color: _isWalletConnected ? AppColors.primary : Colors.grey.shade400,
+            ),
+          ],
+        ),
       ),
     );
   }

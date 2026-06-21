@@ -14,6 +14,7 @@ class SecureStorage {
   static const _keyBiometricEnabled = 'biometric_enabled';
   static const _keyBiometricEmail = 'biometric_email';
   static const _keyBiometricPassword = 'biometric_password';
+  static const _keyWalletConnected = 'wallet_connected';
 
   static Future<void> saveToken(String token) async =>
       _storage.write(key: _keyToken, value: token);
@@ -25,6 +26,14 @@ class SecureStorage {
 
   static Future<bool> isBiometricEnabled() async {
     final val = await _storage.read(key: _keyBiometricEnabled);
+    return val == 'true';
+  }
+
+  static Future<void> setWalletConnected(bool connected) async =>
+      _storage.write(key: _keyWalletConnected, value: connected.toString());
+
+  static Future<bool> isWalletConnected() async {
+    final val = await _storage.read(key: _keyWalletConnected);
     return val == 'true';
   }
 
