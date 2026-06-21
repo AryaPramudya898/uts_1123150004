@@ -118,7 +118,7 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   const SizedBox(height: 32),
                   const AuthHeader(
-                    icon: Icons.lock_open_outlined,
+                    icon: Icons.sports_soccer,
                     title: 'Selamat Datang',
                     subtitle: 'Masuk ke akun Anda untuk melanjutkan',
                   ),
