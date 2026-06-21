@@ -134,16 +134,25 @@ class _ProfileTabState extends State<ProfileTab> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.account_balance_wallet_rounded,
-                  size: 40,
-                  color: AppColors.primary,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.asset(
+                  'assets/icons/logo.png',
+                  width: 72,
+                  height: 72,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_wallet_rounded,
+                      size: 40,
+                      color: AppColors.primary,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -367,15 +376,27 @@ class _ProfileTabState extends State<ProfileTab> {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: _isWalletConnected ? AppColors.primary.withOpacity(0.1) : Colors.grey.shade100,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.account_balance_wallet_outlined,
-                size: 22,
-                color: _isWalletConnected ? AppColors.primary : Colors.grey.shade600,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  'assets/icons/logo.png',
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.account_balance_wallet_outlined,
+                      size: 22,
+                      color: _isWalletConnected ? AppColors.primary : Colors.grey.shade600,
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 14),
