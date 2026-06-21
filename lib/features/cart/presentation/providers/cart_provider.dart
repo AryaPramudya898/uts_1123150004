@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:uts_1123150004/core/services/dio_client.dart';
+import 'package:uts_1123150004/core/services/notification_service.dart';
 import 'package:uts_1123150004/features/cart/data/models/cart_item_model.dart';
 
 class CartProvider extends ChangeNotifier {
@@ -48,6 +49,13 @@ class CartProvider extends ChangeNotifier {
       _items[index] = updatedItem;
     }
     notifyListeners();
+
+    // Tampilkan notifikasi lokal
+    NotificationService.showNotification(
+      id: productId.hashCode,
+      title: 'Keranjang Belanja',
+      body: 'Berhasil menambahkan $productName ke keranjang!',
+    );
 
     // Sinkronisasi ke backend
     try {

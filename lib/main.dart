@@ -9,6 +9,7 @@ import 'package:uts_1123150004/features/auth/presentation/providers/auth_provide
 import 'package:uts_1123150004/features/cart/presentation/providers/cart_provider.dart';
 import 'package:uts_1123150004/features/cart/presentation/providers/checkout_provider.dart';
 import 'package:uts_1123150004/features/dashboard/presentation/providers/product_provider.dart';
+import 'package:uts_1123150004/core/services/notification_service.dart';
 import 'firebase_options.dart';
 
 
@@ -18,6 +19,8 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await NotificationService.init();
 
   runApp(
     MultiProvider(
