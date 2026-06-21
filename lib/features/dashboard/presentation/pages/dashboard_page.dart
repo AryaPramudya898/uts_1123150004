@@ -21,6 +21,7 @@ class _DashboardPageState extends State<DashboardPage> {
     // Fetch produk begitu halaman dibuka
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().fetchProducts();
+      context.read<CartProvider>().fetchCart();
     });
   }
 
