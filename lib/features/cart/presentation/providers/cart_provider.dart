@@ -119,6 +119,12 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
+  /// Clear keranjang secara lokal (tidak menghapus di backend)
+  void clearCartLocally() {
+    _items.clear();
+    notifyListeners();
+  }
+
   /// Restore items from checkout
   Future<void> restoreCart(List<CartItem> items) async {
     if (items.isEmpty) return;

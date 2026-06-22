@@ -10,6 +10,7 @@ import 'package:uts_1123150004/core/routes/app_router.dart';
 import 'package:uts_1123150004/features/cart/data/models/cart_item_model.dart';
 import '../providers/cart_provider.dart';
 import 'payment_success_page.dart';
+import 'package:uts_1123150004/features/dashboard/presentation/pages/dashboard_page.dart';
 
 class CheckoutPage extends StatefulWidget {
   final Map<String, dynamic>? pendingTransaction;
@@ -19,7 +20,7 @@ class CheckoutPage extends StatefulWidget {
   State<CheckoutPage> createState() => _CheckoutPageState();
 }
 
-class _CheckoutPageState extends State<CheckoutPage> {
+class _CheckoutPageState extends State<CheckoutPage> with WidgetsBindingObserver {
   bool _isProcessing = false;
   bool _isWalletConnected = false;
   late final AppLinks _appLinks;
@@ -29,6 +30,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initDeepLinkListener();
     _checkWalletStatus();
 
@@ -38,7 +40,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         setState(() {
           _tempCartItems = List.from(cartProvider.items);
         });
-        cartProvider.clearCart();
+        cartProvider.clearCartLocally();
       }
     });
   }
@@ -136,23 +138,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  void _onPaymentCancelled(String reference) async {
-    if (reference.isNotEmpty) {
-      try {
-        await DioClient.instance.put('/transactions/$reference/status', data: {
-          'status': 'cancelled',
-        });
-      } catch (e) {
-        debugPrint('[CheckoutPage] Gagal update status transaksi ke backend: $e');
-      }
-    }
-
+  void _onPaymentCancelled(String reference) {
     if (!mounted) return;
     setState(() {
       _isProcessing = false;
     });
-
-    await _restoreCart();
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -160,26 +150,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
         backgroundColor: Colors.orange,
       ),
     );
-    Navigator.pop(context);
   }
 
-  void _onPaymentFailed(String reference, String error) async {
-    if (reference.isNotEmpty) {
-      try {
-        await DioClient.instance.put('/transactions/$reference/status', data: {
-          'status': 'failed',
-        });
-      } catch (e) {
-        debugPrint('[CheckoutPage] Gagal update status transaksi ke backend: $e');
-      }
-    }
-
+  void _onPaymentFailed(String reference, String error) {
     if (!mounted) return;
     setState(() {
       _isProcessing = false;
     });
-
-    await _restoreCart();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -187,7 +164,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         backgroundColor: Colors.red,
       ),
     );
-    Navigator.pop(context);
   }
 
   void _connectWallet() async {
@@ -250,6 +226,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
           'amount': amount,
           'description': description,
         });
+        if (mounted) {
+          await context.read<CartProvider>().clearCart();
+        }
       } catch (e) {
         if (mounted) {
           setState(() {
@@ -305,7 +284,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      debugPrint('[CheckoutPage] App resumed, resetting processing status');
+      if (mounted && _isProcessing) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _linkSubscription?.cancel();
     super.dispose();
   }
