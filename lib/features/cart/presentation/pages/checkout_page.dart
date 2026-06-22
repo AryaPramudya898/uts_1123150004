@@ -5,6 +5,7 @@ import 'package:app_links/app_links.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uts_1123150004/core/constants/app_colors.dart';
 import 'package:uts_1123150004/core/services/secure_storage.dart';
+import 'package:uts_1123150004/core/services/dio_client.dart';
 import '../providers/cart_provider.dart';
 import 'payment_success_page.dart';
 
@@ -43,13 +44,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
       debugPrint('[CheckoutPage] Deep link received: $uri');
       if (uri.scheme == 'sepatufutsal' && uri.host == 'checkout') {
         final status = uri.queryParameters['status'];
+        final reference = uri.queryParameters['reference'] ?? '';
+        final transactionId = uri.queryParameters['transaction_id'] ?? '';
+
         if (status == 'success') {
-          _onPaymentSuccess();
+          _onPaymentSuccess(reference, transactionId);
         } else if (status == 'cancelled') {
-          _onPaymentCancelled();
+          _onPaymentCancelled(reference);
         } else if (status == 'failed') {
           final error = uri.queryParameters['error'] ?? 'Pembayaran gagal';
-          _onPaymentFailed(error);
+          _onPaymentFailed(reference, error);
         }
       } else if (uri.scheme == 'sepatufutsal' && uri.host == 'connect') {
         final status = uri.queryParameters['status'];
@@ -71,7 +75,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
     });
   }
 
-  void _onPaymentSuccess() {
+  void _onPaymentSuccess(String reference, String transactionId) async {
+    if (reference.isNotEmpty) {
+      try {
+        await DioClient.instance.put('/transactions/$reference/status', data: {
+          'status': 'success',
+          'transaction_id': transactionId,
+        });
+      } catch (e) {
+        debugPrint('[CheckoutPage] Gagal update status transaksi ke backend: $e');
+      }
+    }
+
     if (!mounted) return;
     setState(() {
       _isProcessing = false;
@@ -90,7 +105,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  void _onPaymentCancelled() {
+  void _onPaymentCancelled(String reference) async {
+    if (reference.isNotEmpty) {
+      try {
+        await DioClient.instance.put('/transactions/$reference/status', data: {
+          'status': 'cancelled',
+        });
+      } catch (e) {
+        debugPrint('[CheckoutPage] Gagal update status transaksi ke backend: $e');
+      }
+    }
+
     if (!mounted) return;
     setState(() {
       _isProcessing = false;
@@ -103,7 +128,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  void _onPaymentFailed(String error) {
+  void _onPaymentFailed(String reference, String error) async {
+    if (reference.isNotEmpty) {
+      try {
+        await DioClient.instance.put('/transactions/$reference/status', data: {
+          'status': 'failed',
+        });
+      } catch (e) {
+        debugPrint('[CheckoutPage] Gagal update status transaksi ke backend: $e');
+      }
+    }
+
     if (!mounted) return;
     setState(() {
       _isProcessing = false;
@@ -161,6 +196,29 @@ class _CheckoutPageState extends State<CheckoutPage> {
         .join(', ');
     final reference = 'ORD-${DateTime.now().millisecondsSinceEpoch}';
 
+    // 1. Kirim transaksi pending ke Go backend
+    try {
+      await DioClient.instance.post('/transactions', data: {
+        'reference': reference,
+        'amount': amount,
+        'description': description,
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuat transaksi di server: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // 2. Launch E-Money deep link
     final uri = Uri.parse('dompetkampus://pay').replace(
       queryParameters: {
         'merchant_id': merchantId,
