@@ -6,11 +6,13 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:uts_1123150004/core/constants/app_colors.dart';
 import 'package:uts_1123150004/core/services/secure_storage.dart';
 import 'package:uts_1123150004/core/services/dio_client.dart';
+import 'package:uts_1123150004/core/routes/app_router.dart';
 import '../providers/cart_provider.dart';
 import 'payment_success_page.dart';
 
 class CheckoutPage extends StatefulWidget {
-  const CheckoutPage({Key? key}) : super(key: key);
+  final Map<String, dynamic>? pendingTransaction;
+  const CheckoutPage({Key? key, this.pendingTransaction}) : super(key: key);
 
   @override
   State<CheckoutPage> createState() => _CheckoutPageState();
@@ -126,6 +128,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
         backgroundColor: Colors.orange,
       ),
     );
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      AppRouter.dashboard,
+      (route) => false,
+      arguments: 1, // index 1 is History
+    );
   }
 
   void _onPaymentFailed(String reference, String error) async {
@@ -148,6 +156,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
         content: Text('Pembayaran gagal: $error'),
         backgroundColor: Colors.red,
       ),
+    );
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      AppRouter.dashboard,
+      (route) => false,
+      arguments: 1, // index 1 is History
     );
   }
 
@@ -180,42 +194,52 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   void _processCheckout() async {
-    final cartProvider = context.read<CartProvider>();
-    final amount = cartProvider.totalPrice;
-    if (amount <= 0) return;
-
-    setState(() {
-      _isProcessing = true;
-    });
-
+    final double amount;
+    final String description;
+    final String reference;
     final callbackUrl = 'sepatufutsal://checkout';
     final merchantId = '1123150004';
     final merchantName = 'Sepatu Ku';
-    final description = cartProvider.items
-        .map((i) => '${i.productName} (x${i.quantity})')
-        .join(', ');
-    final reference = 'ORD-${DateTime.now().millisecondsSinceEpoch}';
 
-    // 1. Kirim transaksi pending ke Go backend
-    try {
-      await DioClient.instance.post('/transactions', data: {
-        'reference': reference,
-        'amount': amount,
-        'description': description,
+    if (widget.pendingTransaction != null) {
+      amount = (widget.pendingTransaction!['amount'] as num).toDouble();
+      description = widget.pendingTransaction!['description'] as String? ?? '';
+      reference = widget.pendingTransaction!['reference'] as String? ?? '';
+    } else {
+      final cartProvider = context.read<CartProvider>();
+      amount = cartProvider.totalPrice;
+      if (amount <= 0) return;
+
+      description = cartProvider.items
+          .map((i) => '${i.productName} (x${i.quantity})')
+          .join(', ');
+      reference = 'ORD-${DateTime.now().millisecondsSinceEpoch}';
+
+      setState(() {
+        _isProcessing = true;
       });
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
+
+      // 1. Kirim transaksi pending ke Go backend
+      try {
+        await DioClient.instance.post('/transactions', data: {
+          'reference': reference,
+          'amount': amount,
+          'description': description,
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal membuat transaksi di server: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal membuat transaksi di server: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
       }
-      return;
     }
 
     // 2. Launch E-Money deep link
@@ -231,12 +255,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
 
     try {
+      setState(() {
+        _isProcessing = true;
+      });
       final launched = await launchUrl(
         uri,
         mode: LaunchMode.externalNonBrowserApplication,
       );
       if (!launched) {
-        throw Exception('Gagal membuka aplikasi e-money. Pastikan aplikasi Dompet Kampus terpasang.');
+        throw Exception('Gagal membuka aplikasi Coach E-Money. Pastikan aplikasi Coach E-Money terpasang.');
       }
     } catch (e) {
       if (mounted) {
@@ -276,7 +303,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ),
         body: Consumer<CartProvider>(
           builder: (context, cartProvider, _) {
-            if (cartProvider.items.isEmpty) {
+            if (widget.pendingTransaction == null && cartProvider.items.isEmpty) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -307,6 +334,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
               );
             }
 
+            final int itemCount = widget.pendingTransaction != null ? 1 : cartProvider.itemCount;
+            final double totalPrice = widget.pendingTransaction != null ? (widget.pendingTransaction!['amount'] as num).toDouble() : cartProvider.totalPrice;
             return Column(
               children: [
                 Expanded(
@@ -373,8 +402,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                           ),
                                         ),
                                         const SizedBox(height: 4),
-                                        Text(
-                                          '${cartProvider.itemCount} item',
+                                         Text(
+                                          '$itemCount item',
                                           style: const TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
@@ -400,7 +429,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Rp ${cartProvider.totalPrice.toStringAsFixed(0)}',
+                                          'Rp ${totalPrice.toStringAsFixed(0)}',
                                           style: const TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
@@ -430,12 +459,91 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         ),
 
                         // Item List (Column instead of scrollable ListView)
-                        ListView.builder(
+                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: cartProvider.items.length,
+                          itemCount: widget.pendingTransaction != null ? 1 : cartProvider.items.length,
                           itemBuilder: (context, index) {
+                            if (widget.pendingTransaction != null) {
+                              final description = widget.pendingTransaction!['description'] as String? ?? 'Pembayaran';
+                              final double amount = (widget.pendingTransaction!['amount'] as num? ?? 0).toDouble();
+                              return Card(
+                                elevation: 1,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(color: Colors.grey.shade200),
+                                ),
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 60,
+                                        height: 60,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.lightGreen50,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.shopping_bag_outlined,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              description,
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.textPrimary,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Total: Rp ${amount.toStringAsFixed(0)}',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: AppColors.textSecondary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          const Text(
+                                            'Subtotal',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Rp ${amount.toStringAsFixed(0)}',
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
                             final item = cartProvider.items[index];
                             return Card(
                               elevation: 1,
@@ -726,7 +834,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ),
                           ),
                           Text(
-                            'Rp ${cartProvider.totalPrice.toStringAsFixed(0)}',
+                            'Rp ${totalPrice.toStringAsFixed(0)}',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
