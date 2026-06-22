@@ -175,17 +175,28 @@ class _ProfileTabState extends State<ProfileTab> {
         ),
       );
       if (confirm == true) {
-        await SecureStorage.setWalletConnected(false);
-        setState(() {
-          _isWalletConnected = false;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Hubungan Coach E-Money diputuskan'),
-              backgroundColor: Colors.orange,
-            ),
-          );
+        final disconnectUri = Uri.parse('dompetkampus://disconnect').replace(
+          queryParameters: {
+            'merchant_id': '1123150004',
+            'merchant_name': 'Sepatu Ku',
+            'callback': 'sepatufutsal://connect',
+          },
+        );
+        try {
+          await launchUrl(disconnectUri, mode: LaunchMode.externalApplication);
+        } catch (e) {
+          await SecureStorage.setWalletConnected(false);
+          if (mounted) {
+            setState(() {
+              _isWalletConnected = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Koneksi diputuskan secara lokal (aplikasi e-money tidak ditemukan)'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
         }
       }
     } else {
