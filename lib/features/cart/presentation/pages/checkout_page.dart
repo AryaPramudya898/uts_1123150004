@@ -97,8 +97,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
     });
 
     final callbackUrl = 'sepatufutsal://checkout';
-    final merchantId = 'TOKO_SEPATU_FUTSAL';
-    final merchantName = 'Toko Sepatu Futsal';
+    final merchantId = 'TOKO_SEPATU_KU';
+    final merchantName = 'Sepatu Ku';
     final description = cartProvider.items
         .map((i) => '${i.productName} (x${i.quantity})')
         .join(', ');

@@ -76,7 +76,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                   // Widget reusable: AuthHeader
                   const AuthHeader(
-                    icon: Icons.person_add_alt_1,
+                    imagePath: 'assets/icons/sepatu-ku.png',
                     title: 'Buat Akun Baru',
                     subtitle: 'Lengkapi data diri Anda untuk mendaftar',
                   ),
