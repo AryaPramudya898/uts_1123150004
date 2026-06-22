@@ -20,7 +20,11 @@ class AppRouter {
     login:       (_) => const LoginPage(),
     register:    (_) => const RegisterPage(),
     verifyEmail: (_) => const VerifyEmailPage(),
-    dashboard:   (_) => const AuthGuard(child: DashboardPage()),
+    dashboard:   (context) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      final initialIndex = args is int ? args : 0;
+      return AuthGuard(child: DashboardPage(initialIndex: initialIndex));
+    },
   };
 
 }

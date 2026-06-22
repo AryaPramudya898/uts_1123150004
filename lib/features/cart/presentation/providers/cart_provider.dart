@@ -118,4 +118,35 @@ class CartProvider extends ChangeNotifier {
       debugPrint('[CartProvider] Gagal mengosongkan keranjang di backend: $e');
     }
   }
+
+  /// Clear keranjang secara lokal (tidak menghapus di backend)
+  void clearCartLocally() {
+    _items.clear();
+    notifyListeners();
+  }
+
+  /// Restore items from checkout
+  Future<void> restoreCart(List<CartItem> items) async {
+    if (items.isEmpty) return;
+    _items.clear();
+    _items.addAll(items);
+    notifyListeners();
+
+    // Sinkronisasi ke backend
+    try {
+      // Clear cart on backend first
+      await DioClient.instance.delete('/cart');
+      // Add items back to backend
+      for (final item in items) {
+        await DioClient.instance.post('/cart', data: {
+          'product_id': int.parse(item.productId),
+          'quantity': item.quantity,
+        });
+      }
+      // Re-fetch to sync IDs properly
+      await fetchCart();
+    } catch (e) {
+      debugPrint('[CartProvider] Gagal restore keranjang ke backend: $e');
+    }
+  }
 }

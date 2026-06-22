@@ -25,6 +25,7 @@ class _ProfileTabState extends State<ProfileTab> {
   bool _isBiometricSupported = false;
   bool _isLoading = true;
   bool _isWalletConnected = false;
+  bool _isConnectDialogOpen = false;
 
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
@@ -50,8 +51,8 @@ class _ProfileTabState extends State<ProfileTab> {
       if (uri.scheme == 'sepatufutsal' && uri.host == 'connect') {
         final status = uri.queryParameters['status'];
         
-        // Dismiss loading dialog if active
-        if (mounted && Navigator.canPop(context)) {
+        // Dismiss loading dialog if active and initiated from this tab
+        if (_isConnectDialogOpen && mounted && Navigator.canPop(context)) {
           Navigator.pop(context);
         }
 
@@ -65,6 +66,19 @@ class _ProfileTabState extends State<ProfileTab> {
               const SnackBar(
                 content: Text('Berhasil terhubung ke Coach E-Money!'),
                 backgroundColor: AppColors.primary,
+              ),
+            );
+          }
+        } else if (status == 'disconnected') {
+          await SecureStorage.setWalletConnected(false);
+          if (mounted) {
+            setState(() {
+              _isWalletConnected = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Koneksi dengan Coach E-Money telah diputuskan'),
+                backgroundColor: Colors.red,
               ),
             );
           }
@@ -162,17 +176,28 @@ class _ProfileTabState extends State<ProfileTab> {
         ),
       );
       if (confirm == true) {
-        await SecureStorage.setWalletConnected(false);
-        setState(() {
-          _isWalletConnected = false;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Hubungan Coach E-Money diputuskan'),
-              backgroundColor: Colors.orange,
-            ),
-          );
+        final disconnectUri = Uri.parse('dompetkampus://disconnect').replace(
+          queryParameters: {
+            'merchant_id': '1123150004',
+            'merchant_name': 'Sepatu Ku',
+            'callback': 'sepatufutsal://connect',
+          },
+        );
+        try {
+          await launchUrl(disconnectUri, mode: LaunchMode.externalApplication);
+        } catch (e) {
+          await SecureStorage.setWalletConnected(false);
+          if (mounted) {
+            setState(() {
+              _isWalletConnected = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Koneksi diputuskan secara lokal (aplikasi e-money tidak ditemukan)'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
         }
       }
     } else {
@@ -245,6 +270,7 @@ class _ProfileTabState extends State<ProfileTab> {
                       if (!mounted) return;
                       
                       // Show loading dialog waiting for confirmation
+                      _isConnectDialogOpen = true;
                       showDialog(
                         context: this.context,
                         barrierDismissible: true,
@@ -270,7 +296,9 @@ class _ProfileTabState extends State<ProfileTab> {
                             ),
                           ),
                         ),
-                      );
+                      ).then((_) {
+                        _isConnectDialogOpen = false;
+                      });
                     } else {
                       // Suggest download - redirect to Play Store search or mock download page
                       await launchUrl(
