@@ -25,6 +25,7 @@ class _ProfileTabState extends State<ProfileTab> {
   bool _isBiometricSupported = false;
   bool _isLoading = true;
   bool _isWalletConnected = false;
+  bool _isConnectDialogOpen = false;
 
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
@@ -50,8 +51,8 @@ class _ProfileTabState extends State<ProfileTab> {
       if (uri.scheme == 'sepatufutsal' && uri.host == 'connect') {
         final status = uri.queryParameters['status'];
         
-        // Dismiss loading dialog if active
-        if (mounted && Navigator.canPop(context)) {
+        // Dismiss loading dialog if active and initiated from this tab
+        if (_isConnectDialogOpen && mounted && Navigator.canPop(context)) {
           Navigator.pop(context);
         }
 
@@ -269,6 +270,7 @@ class _ProfileTabState extends State<ProfileTab> {
                       if (!mounted) return;
                       
                       // Show loading dialog waiting for confirmation
+                      _isConnectDialogOpen = true;
                       showDialog(
                         context: this.context,
                         barrierDismissible: true,
@@ -294,7 +296,9 @@ class _ProfileTabState extends State<ProfileTab> {
                             ),
                           ),
                         ),
-                      );
+                      ).then((_) {
+                        _isConnectDialogOpen = false;
+                      });
                     } else {
                       // Suggest download - redirect to Play Store search or mock download page
                       await launchUrl(

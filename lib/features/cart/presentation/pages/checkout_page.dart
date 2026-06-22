@@ -27,10 +27,12 @@ class _CheckoutPageState extends State<CheckoutPage> with WidgetsBindingObserver
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
   List<CartItem> _tempCartItems = [];
+  bool _transactionCreated = false;
 
   @override
   void initState() {
     super.initState();
+    _transactionCreated = widget.pendingTransaction != null;
     WidgetsBinding.instance.addObserver(this);
     _initDeepLinkListener();
     _checkWalletStatus();
@@ -47,6 +49,11 @@ class _CheckoutPageState extends State<CheckoutPage> with WidgetsBindingObserver
   }
 
   Future<void> _restoreCart() async {
+    if (_transactionCreated) {
+      // Jika transaksi sudah berhasil dibuat di backend, jangan restore keranjang!
+      // Biarkan keranjang kosong karena item-item tersebut sudah menjadi transaksi pending.
+      return;
+    }
     if (widget.pendingTransaction == null && _tempCartItems.isNotEmpty) {
       final itemsToRestore = List<CartItem>.from(_tempCartItems);
       _tempCartItems.clear();
@@ -238,6 +245,7 @@ class _CheckoutPageState extends State<CheckoutPage> with WidgetsBindingObserver
           'amount': amount,
           'description': description,
         });
+        _transactionCreated = true;
         if (mounted) {
           await context.read<CartProvider>().clearCart();
         }
@@ -540,8 +548,6 @@ class _CheckoutPageState extends State<CheckoutPage> with WidgetsBindingObserver
                                                 fontWeight: FontWeight.bold,
                                                 color: AppColors.textPrimary,
                                               ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
@@ -625,8 +631,6 @@ class _CheckoutPageState extends State<CheckoutPage> with WidgetsBindingObserver
                                               fontWeight: FontWeight.bold,
                                               color: AppColors.textPrimary,
                                             ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
@@ -910,27 +914,6 @@ class _CheckoutPageState extends State<CheckoutPage> with WidgetsBindingObserver
                                 ),
                               ),
                       ),
-                      if (widget.pendingTransaction == null) ...[
-                        const SizedBox(height: 8),
-                        OutlinedButton(
-                          onPressed: _isProcessing ? null : _cancelAndGoBack,
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.red),
-                            foregroundColor: Colors.red,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text(
-                            'Batalkan Pembayaran',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
