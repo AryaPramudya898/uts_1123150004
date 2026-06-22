@@ -185,6 +185,27 @@ class AuthProvider extends ChangeNotifier {
     _status = AuthStatus.unauthenticated;
     notifyListeners();
   }
+
+  Future<bool> checkPersistedSession() async {
+    final user = _auth.currentUser;
+    final token = await SecureStorage.getToken();
+    if (user != null && token != null) {
+      _firebaseUser = user;
+      _backendToken = token;
+      _status = AuthStatus.authenticated;
+      notifyListeners();
+      return true;
+    } else {
+      _status = AuthStatus.unauthenticated;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  void setUnauthenticated() {
+    _status = AuthStatus.unauthenticated;
+    notifyListeners();
+  }
   
    // ─── Private Helpers ──────────────────────────────────────
   void _setLoading() {

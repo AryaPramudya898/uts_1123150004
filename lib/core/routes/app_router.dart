@@ -3,6 +3,7 @@ import 'package:uts_1123150004/core/guards/auth_guard.dart';
 import 'package:uts_1123150004/features/auth/presentation/pages/login_page.dart';
 import 'package:uts_1123150004/features/auth/presentation/pages/register_page.dart';
 import 'package:uts_1123150004/features/auth/presentation/pages/verify_email_page.dart';
+import 'package:uts_1123150004/features/auth/presentation/pages/splash_page.dart';
 import 'package:uts_1123150004/features/dashboard/presentation/pages/dashboard_page.dart';
 
 
@@ -15,7 +16,7 @@ class AppRouter {
   static const String dashboard   = '/dashboard';
 
   static Map<String, WidgetBuilder> get routes => {
-    // splash:      (_) => const SplashPage(),
+    splash:      (_) => const SplashPage(),
     login:       (_) => const LoginPage(),
     register:    (_) => const RegisterPage(),
     verifyEmail: (_) => const VerifyEmailPage(),

@@ -2,6 +2,7 @@ import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uts_1123150004/core/routes/app_router.dart';
+import 'package:uts_1123150004/core/services/biometric_service.dart';
 import 'package:uts_1123150004/core/widgets/auth_header.dart';
 import 'package:uts_1123150004/core/widgets/custom_button.dart';
 import 'package:uts_1123150004/core/widgets/custom_text_field.dart';
@@ -26,6 +27,47 @@ class _LoginPageState extends State<LoginPage> {
   final _passCtrl = TextEditingController();
   bool _showPass = false;
 
+  final BiometricService _biometricService = BiometricService();
+  bool _showBiometricButton = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometricAvailability();
+  }
+
+  Future<void> _checkBiometricAvailability() async {
+    final available = await _biometricService.isBiometricAvailable();
+    final enabled = await _biometricService.isBiometricEnabled();
+    final credentials = await _biometricService.getSavedCredentials();
+    if (mounted) {
+      setState(() {
+        _showBiometricButton = available && enabled && credentials != null;
+      });
+      // Auto-prompt biometrics if enabled and credentials saved
+      if (available && enabled && credentials != null) {
+        _loginBiometric();
+      }
+    }
+  }
+
+  Future<void> _loginBiometric() async {
+    final authenticated = await _biometricService.authenticate();
+    if (!authenticated) return;
+
+    final credentials = await _biometricService.getSavedCredentials();
+    if (credentials == null) return;
+
+    final auth = context.read<AuthProvider>();
+    final ok = await auth.loginWithEmail(
+      email: credentials['email']!,
+      password: credentials['password']!,
+    );
+
+    if (!mounted) return;
+    _handleLoginResult(ok, auth);
+  }
+
   @override
   void dispose() {
     _emailCtrl.dispose();
@@ -38,12 +80,19 @@ class _LoginPageState extends State<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
 
     final auth = context.read<AuthProvider>();
+    final email = _emailCtrl.text.trim();
+    final password = _passCtrl.text;
+    
     final ok = await auth.loginWithEmail(
-      email: _emailCtrl.text.trim(),
-      password: _passCtrl.text,
+      email: email,
+      password: password,
     );
 
     if (!mounted) return;
+    if (ok) {
+      // Save credentials for biometric login helper
+      await _biometricService.saveCredentials(email, password);
+    }
     _handleLoginResult(ok, auth);
   }
 
@@ -118,7 +167,7 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   const SizedBox(height: 32),
                   const AuthHeader(
-                    icon: Icons.lock_open_outlined,
+                    icon: Icons.sports_soccer,
                     title: 'Selamat Datang',
                     subtitle: 'Masuk ke akun Anda untuk melanjutkan',
                   ),
@@ -162,10 +211,32 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  CustomButton(
-                    label: 'Masuk',
-                    onPressed: _loginEmail,
-                    isLoading: isLoading,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CustomButton(
+                          label: 'Masuk',
+                          onPressed: _loginEmail,
+                          isLoading: isLoading,
+                        ),
+                      ),
+                      if (_showBiometricButton) ...[
+                        const SizedBox(width: 12),
+                        Container(
+                          height: 52,
+                          width: 56,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200, width: 1.5),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.fingerprint_rounded, size: 28, color: Color(0xFF4CAF50)),
+                            onPressed: _loginBiometric,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 20),
                   const DividerWithText(text: 'atau masuk dengan'),

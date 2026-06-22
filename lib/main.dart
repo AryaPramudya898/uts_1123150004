@@ -9,6 +9,7 @@ import 'package:uts_1123150004/features/auth/presentation/providers/auth_provide
 import 'package:uts_1123150004/features/cart/presentation/providers/cart_provider.dart';
 import 'package:uts_1123150004/features/cart/presentation/providers/checkout_provider.dart';
 import 'package:uts_1123150004/features/dashboard/presentation/providers/product_provider.dart';
+import 'package:uts_1123150004/core/services/notification_service.dart';
 import 'firebase_options.dart';
 
 
@@ -18,6 +19,8 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await NotificationService.init();
 
   runApp(
     MultiProvider(
@@ -42,38 +45,8 @@ class MyApp extends StatelessWidget {
       title:                  AppStrings.appName,
       debugShowCheckedModeBanner: false,
       theme:                  AppTheme.light,
-      initialRoute:           AppRouter.login,
+      initialRoute:           AppRouter.splash,
       routes:                 AppRouter.routes,
     );
   }
-}
-
-
-class SplashPage extends StatefulWidget {
-  const SplashPage({super.key});
-
-  @override
-  State<SplashPage> createState() => _SplashPageState();
-}
-
-class _SplashPageState extends State<SplashPage> {
-  @override
-  void initState() {
-    super.initState();
-    _checkAuth();
-  }
-
-  Future<void> _checkAuth() async {
-    await Future.delayed(const Duration(seconds: 2)); // Animasi splash
-    if (!mounted) return;
-
-    final token = await SecureStorage.getToken();
-    final route = token != null ? AppRouter.dashboard : AppRouter.login;
-    Navigator.pushReplacementNamed(context, route);
-  }
-
-  @override
-  Widget build(BuildContext context) => const Scaffold(
-    body: Center(child: CircularProgressIndicator()),
-  );
 }

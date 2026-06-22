@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:app_links/app_links.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:uts_1123150004/core/constants/app_colors.dart';
 import '../providers/cart_provider.dart';
 import 'payment_success_page.dart';
@@ -13,33 +16,132 @@ class CheckoutPage extends StatefulWidget {
 
 class _CheckoutPageState extends State<CheckoutPage> {
   bool _isProcessing = false;
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _initDeepLinkListener();
+  }
+
+  void _initDeepLinkListener() {
+    _appLinks = AppLinks();
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
+      if (uri.scheme == 'sepatufutsal' && uri.host == 'checkout') {
+        final status = uri.queryParameters['status'];
+        if (status == 'success') {
+          _onPaymentSuccess();
+        } else if (status == 'cancelled') {
+          _onPaymentCancelled();
+        } else if (status == 'failed') {
+          final error = uri.queryParameters['error'] ?? 'Pembayaran gagal';
+          _onPaymentFailed(error);
+        }
+      }
+    });
+  }
+
+  void _onPaymentSuccess() {
+    if (!mounted) return;
+    setState(() {
+      _isProcessing = false;
+    });
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentSuccessPage(
+          onSuccess: () {
+            // Clear cart setelah sukses
+            context.read<CartProvider>().clearCart();
+            Navigator.popUntil(context, (route) => route.isFirst);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _onPaymentCancelled() {
+    if (!mounted) return;
+    setState(() {
+      _isProcessing = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Pembayaran dibatalkan oleh pengguna.'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+  }
+
+  void _onPaymentFailed(String error) {
+    if (!mounted) return;
+    setState(() {
+      _isProcessing = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Pembayaran gagal: $error'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
 
   void _processCheckout() async {
+    final cartProvider = context.read<CartProvider>();
+    final amount = cartProvider.totalPrice;
+    if (amount <= 0) return;
+
     setState(() {
       _isProcessing = true;
     });
 
-    // Simulasi proses pembayaran
-    await Future.delayed(const Duration(seconds: 2));
+    final callbackUrl = 'sepatufutsal://checkout';
+    final merchantId = 'TOKO_SEPATU_FUTSAL';
+    final merchantName = 'Toko Sepatu Futsal';
+    final description = cartProvider.items
+        .map((i) => '${i.productName} (x${i.quantity})')
+        .join(', ');
+    final reference = 'ORD-${DateTime.now().millisecondsSinceEpoch}';
 
-    if (mounted) {
-      setState(() {
-        _isProcessing = false;
-      });
+    final uri = Uri.parse('dompetkampus://pay').replace(
+      queryParameters: {
+        'merchant_id': merchantId,
+        'merchant_name': merchantName,
+        'amount': amount.toStringAsFixed(0),
+        'description': description,
+        'reference': reference,
+        'callback': callbackUrl,
+      },
+    );
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PaymentSuccessPage(
-            onSuccess: () {
-              // Clear cart setelah sukses
-              context.read<CartProvider>().clearCart();
-              Navigator.popUntil(context, (route) => route.isFirst);
-            },
-          ),
-        ),
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalNonBrowserApplication,
       );
+      if (!launched) {
+        throw Exception('Gagal membuka aplikasi e-money. Pastikan aplikasi Dompet Kampus terpasang.');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
   }
 
   @override

@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uts_1123150004/core/routes/app_router.dart';
+import 'package:uts_1123150004/core/constants/app_colors.dart';
 import 'package:uts_1123150004/features/auth/presentation/providers/auth_provider.dart';
 import 'package:uts_1123150004/features/cart/presentation/pages/cart_page.dart';
 import 'package:uts_1123150004/features/cart/presentation/providers/cart_provider.dart';
 import 'package:uts_1123150004/features/dashboard/presentation/providers/product_provider.dart';
 
+// Import Tabs
+import 'home_tab.dart';
+import 'history_tab.dart';
+import 'profile_tab.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -15,201 +20,125 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  int _currentIndex = 0;
+
   @override
   void initState() {
     super.initState();
-    // Fetch produk begitu halaman dibuka
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().fetchProducts();
+      context.read<CartProvider>().fetchCart();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final product = context.watch<ProductProvider>();
+    final userName = auth.firebaseUser?.displayName ?? 'User';
+    final userEmail = auth.firebaseUser?.email ?? '';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Dashboard', style: TextStyle(fontSize: 18)),
-            Text(
-              'Halo, ${auth.firebaseUser?.displayName ?? 'User'}!',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.normal,
-              ),
+    // Daftar tabs/halaman
+    final List<Widget> tabs = [
+      const HomeTab(),
+      const HistoryTab(),
+      ProfileTab(name: userName, email: userEmail),
+    ];
+
+    // Judul AppBar dinamis sesuai tab aktif
+    final List<Widget> appBarTitles = [
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Dashboard', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(
+            'Halo, $userName!',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.normal,
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.shopping_cart),
-            tooltip: 'Keranjang',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const CartPage()),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await auth.logout();
-              if (!mounted) return;
-              Navigator.pushReplacementNamed(context, AppRouter.login);
-            },
           ),
         ],
       ),
+      const Text('Riwayat Transaksi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      const Text('Profil Pengguna', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+    ];
 
-      body: switch (product.status) {
-        ProductStatus.loading || ProductStatus.initial => const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Memuat produk...'),
-            ],
-          ),
-        ),
-
-        ProductStatus.error => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(product.error ?? 'Terjadi kesalahan'),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.refresh),
-                label: const Text('Coba Lagi'),
-                onPressed: () => product.fetchProducts(),
-              ),
-            ],
-          ),
-        ),
-
-        ProductStatus.loaded => RefreshIndicator(
-          onRefresh: () => product.fetchProducts(),
-          child: GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.75,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
+    return Scaffold(
+      backgroundColor: const Color(0xFFF9FBF9),
+      appBar: AppBar(
+        title: appBarTitles[_currentIndex],
+        elevation: 2,
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.textPrimary,
+        actions: _currentIndex == 0
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.shopping_cart),
+                  tooltip: 'Keranjang',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const CartPage()),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  onPressed: () async {
+                    await auth.logout();
+                    if (!mounted) return;
+                    Navigator.pushReplacementNamed(context, AppRouter.login);
+                  },
+                ),
+              ]
+            : null,
+      ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: tabs,
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
             ),
-            itemCount: product.products.length,
-            itemBuilder: (context, i) {
-              final p = product.products[i];
-              return Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(12),
-                      ),
-                      child: Image.network(
-                        p.imageUrl,
-                        height: 120,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          height: 120,
-                          color: Colors.grey.shade200,
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            size: 40,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            p.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Rp ${p.price.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              color: Color(0xFF4CAF50),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              p.category,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF4CAF50),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          ElevatedButton(
-                            onPressed: () {
-                              context.read<CartProvider>().addItem(
-                                p.id.toString(),
-                                p.name,
-                                p.price,
-                                imageUrl: p.imageUrl,
-                              );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('${p.name} ditambahkan ke keranjang'),
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              minimumSize: const Size(double.infinity, 36),
-                            ),
-                            child: const Text(
-                              'Tambah ke Keranjang',
-                              style: TextStyle(fontSize: 12),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+          ],
         ),
-      },
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+          backgroundColor: Colors.white,
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: Colors.grey.shade400,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+          type: BottomNavigationBarType.fixed,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.history_rounded),
+              activeIcon: Icon(Icons.history_toggle_off_rounded),
+              label: 'Riwayat',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline_rounded),
+              activeIcon: Icon(Icons.person),
+              label: 'Profil',
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
