@@ -207,6 +207,59 @@ class _HistoryTabState extends State<HistoryTab> {
     );
   }
 
+  void _confirmCancelTransaction(BuildContext context, String reference) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Batalkan Pembelian'),
+          content: const Text('Apakah Anda yakin ingin membatalkan pembelian ini?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Kembali'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                try {
+                  final response = await DioClient.instance.put(
+                    '/transactions/$reference/status',
+                    data: {'status': 'cancelled'},
+                  );
+                  if (response.statusCode == 200) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Pembelian berhasil dibatalkan.'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                    _refreshTransactions();
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Gagal membatalkan pembelian: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text(
+                'Ya, Batalkan',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
@@ -276,6 +329,7 @@ class _HistoryTabState extends State<HistoryTab> {
             itemBuilder: (context, index) {
               final order = orders[index] as Map<String, dynamic>;
               final isSuccess = order['status'] == 'success';
+              final isCancelled = order['status'] == 'cancelled';
               final reference = order['reference'] ?? '';
               final amount = (order['amount'] as num? ?? 0).toDouble();
               final description = order['description'] ?? '';
@@ -294,6 +348,8 @@ class _HistoryTabState extends State<HistoryTab> {
                   onTap: () {
                     if (isSuccess) {
                       _showInvoice(context, order);
+                    } else if (isCancelled) {
+                      // Tidak ada aksi untuk pesanan dibatalkan
                     } else {
                       Navigator.push(
                         context,
@@ -318,14 +374,20 @@ class _HistoryTabState extends State<HistoryTab> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: isSuccess ? Colors.green.shade50 : Colors.orange.shade50,
+                                color: isSuccess
+                                    ? Colors.green.shade50
+                                    : (isCancelled ? Colors.red.shade50 : Colors.orange.shade50),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
-                                isSuccess ? 'Sukses' : 'Belum Dibayar',
+                                isSuccess
+                                    ? 'Sukses'
+                                    : (isCancelled ? 'Dibatalkan' : 'Belum Dibayar'),
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: isSuccess ? Colors.green : Colors.orange.shade800,
+                                  color: isSuccess
+                                      ? Colors.green
+                                      : (isCancelled ? Colors.red.shade800 : Colors.orange.shade800),
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -339,13 +401,19 @@ class _HistoryTabState extends State<HistoryTab> {
                               width: 50,
                               height: 50,
                               decoration: BoxDecoration(
-                                color: isSuccess ? Colors.green.shade50 : Colors.orange.shade50,
+                                color: isSuccess
+                                    ? Colors.green.shade50
+                                    : (isCancelled ? Colors.red.shade50 : Colors.orange.shade50),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Center(
                                 child: Icon(
-                                  isSuccess ? Icons.check_circle_outline_rounded : Icons.payment_rounded,
-                                  color: isSuccess ? Colors.green : Colors.orange,
+                                  isSuccess
+                                      ? Icons.check_circle_outline_rounded
+                                      : (isCancelled ? Icons.cancel_outlined : Icons.payment_rounded),
+                                  color: isSuccess
+                                      ? Colors.green
+                                      : (isCancelled ? Colors.red : Colors.orange),
                                   size: 26,
                                 ),
                               ),
@@ -399,32 +467,52 @@ class _HistoryTabState extends State<HistoryTab> {
                                 ),
                               ],
                             ),
-                            OutlinedButton(
-                              onPressed: () {
-                                if (isSuccess) {
-                                  _showInvoice(context, order);
-                                } else {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => CheckoutPage(pendingTransaction: order),
+                            if (!isCancelled)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (!isSuccess) ...[
+                                    TextButton(
+                                      onPressed: () => _confirmCancelTransaction(context, reference),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.red,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      ),
+                                      child: const Text(
+                                        'Batalkan',
+                                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                                      ),
                                     ),
-                                  ).then((_) => _refreshTransactions());
-                                }
-                              },
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: isSuccess ? AppColors.primary : Colors.orange),
-                                foregroundColor: isSuccess ? AppColors.primary : Colors.orange,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  OutlinedButton(
+                                    onPressed: () {
+                                      if (isSuccess) {
+                                        _showInvoice(context, order);
+                                      } else {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => CheckoutPage(pendingTransaction: order),
+                                          ),
+                                        ).then((_) => _refreshTransactions());
+                                      }
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(color: isSuccess ? AppColors.primary : Colors.orange),
+                                      foregroundColor: isSuccess ? AppColors.primary : Colors.orange,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    ),
+                                    child: Text(
+                                      isSuccess ? 'Lihat Invoice' : 'Bayar Sekarang',
+                                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              child: Text(
-                                isSuccess ? 'Lihat Invoice' : 'Bayar Sekarang',
-                                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
-                              ),
-                            ),
                           ],
                         ),
                       ],

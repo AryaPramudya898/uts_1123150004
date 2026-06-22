@@ -7,6 +7,7 @@ import 'package:uts_1123150004/core/constants/app_colors.dart';
 import 'package:uts_1123150004/core/services/secure_storage.dart';
 import 'package:uts_1123150004/core/services/dio_client.dart';
 import 'package:uts_1123150004/core/routes/app_router.dart';
+import 'package:uts_1123150004/features/cart/data/models/cart_item_model.dart';
 import '../providers/cart_provider.dart';
 import 'payment_success_page.dart';
 
@@ -23,12 +24,39 @@ class _CheckoutPageState extends State<CheckoutPage> {
   bool _isWalletConnected = false;
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
+  List<CartItem> _tempCartItems = [];
 
   @override
   void initState() {
     super.initState();
     _initDeepLinkListener();
     _checkWalletStatus();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.pendingTransaction == null) {
+        final cartProvider = context.read<CartProvider>();
+        setState(() {
+          _tempCartItems = List.from(cartProvider.items);
+        });
+        cartProvider.clearCart();
+      }
+    });
+  }
+
+  Future<void> _restoreCart() async {
+    if (widget.pendingTransaction == null && _tempCartItems.isNotEmpty) {
+      final itemsToRestore = List<CartItem>.from(_tempCartItems);
+      _tempCartItems.clear();
+      await context.read<CartProvider>().restoreCart(itemsToRestore);
+    }
+  }
+
+  Future<void> _cancelAndGoBack() async {
+    if (_isProcessing) return;
+    await _restoreCart();
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   Future<void> _checkWalletStatus() async {
@@ -93,6 +121,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     setState(() {
       _isProcessing = false;
     });
+    _tempCartItems.clear();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -122,18 +151,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
     setState(() {
       _isProcessing = false;
     });
+
+    await _restoreCart();
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Pembayaran dibatalkan oleh pengguna.'),
         backgroundColor: Colors.orange,
       ),
     );
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      AppRouter.dashboard,
-      (route) => false,
-      arguments: 1, // index 1 is History
-    );
+    Navigator.pop(context);
   }
 
   void _onPaymentFailed(String reference, String error) async {
@@ -151,18 +178,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
     setState(() {
       _isProcessing = false;
     });
+
+    await _restoreCart();
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Pembayaran gagal: $error'),
         backgroundColor: Colors.red,
       ),
     );
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      AppRouter.dashboard,
-      (route) => false,
-      arguments: 1, // index 1 is History
-    );
+    Navigator.pop(context);
   }
 
   void _connectWallet() async {
@@ -206,11 +231,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
       description = widget.pendingTransaction!['description'] as String? ?? '';
       reference = widget.pendingTransaction!['reference'] as String? ?? '';
     } else {
-      final cartProvider = context.read<CartProvider>();
-      amount = cartProvider.totalPrice;
+      amount = _tempCartItems.fold(0.0, (sum, item) => sum + item.totalPrice);
       if (amount <= 0) return;
 
-      description = cartProvider.items
+      description = _tempCartItems
           .map((i) => '${i.productName} (x${i.quantity})')
           .join(', ');
       reference = 'ORD-${DateTime.now().millisecondsSinceEpoch}';
@@ -291,6 +315,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return WillPopScope(
       onWillPop: () async {
         if (_isProcessing) return false;
+        await _restoreCart();
         return true;
       },
       child: Scaffold(
@@ -298,12 +323,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
         appBar: AppBar(
           title: const Text('Konfirmasi Pesanan'),
           centerTitle: true,
-          automaticallyImplyLeading: !_isProcessing,
+          automaticallyImplyLeading: false,
+          leading: !_isProcessing
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: _cancelAndGoBack,
+                )
+              : null,
           elevation: 2,
         ),
         body: Consumer<CartProvider>(
           builder: (context, cartProvider, _) {
-            if (widget.pendingTransaction == null && cartProvider.items.isEmpty) {
+            if (widget.pendingTransaction == null && _tempCartItems.isEmpty) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -334,8 +365,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
               );
             }
 
-            final int itemCount = widget.pendingTransaction != null ? 1 : cartProvider.itemCount;
-            final double totalPrice = widget.pendingTransaction != null ? (widget.pendingTransaction!['amount'] as num).toDouble() : cartProvider.totalPrice;
+            final int itemCount = widget.pendingTransaction != null ? 1 : _tempCartItems.length;
+            final double totalPrice = widget.pendingTransaction != null
+                ? (widget.pendingTransaction!['amount'] as num).toDouble()
+                : _tempCartItems.fold(0.0, (sum, item) => sum + item.totalPrice);
             return Column(
               children: [
                 Expanded(
@@ -463,7 +496,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: widget.pendingTransaction != null ? 1 : cartProvider.items.length,
+                          itemCount: widget.pendingTransaction != null ? 1 : _tempCartItems.length,
                           itemBuilder: (context, index) {
                             if (widget.pendingTransaction != null) {
                               final description = widget.pendingTransaction!['description'] as String? ?? 'Pembayaran';
@@ -544,7 +577,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                 ),
                               );
                             }
-                            final item = cartProvider.items[index];
+                            final item = _tempCartItems[index];
                             return Card(
                               elevation: 1,
                               shape: RoundedRectangleBorder(
@@ -873,6 +906,27 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                 ),
                               ),
                       ),
+                      if (widget.pendingTransaction == null) ...[
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          onPressed: _isProcessing ? null : _cancelAndGoBack,
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.red),
+                            foregroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Batalkan Pembayaran',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
