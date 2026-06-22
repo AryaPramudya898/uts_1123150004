@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:app_links/app_links.dart';
 import 'package:uts_1123150004/core/constants/app_colors.dart';
 import 'package:uts_1123150004/core/routes/app_router.dart';
 import 'package:uts_1123150004/core/services/secure_storage.dart';
@@ -24,11 +26,60 @@ class _ProfileTabState extends State<ProfileTab> {
   bool _isLoading = true;
   bool _isWalletConnected = false;
 
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+
   @override
   void initState() {
     super.initState();
     _checkBiometricStatus();
     _loadWalletStatus();
+    _initDeepLinkListener();
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _initDeepLinkListener() {
+    _appLinks = AppLinks();
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) async {
+      debugPrint('[ProfileTab] Deep link received: $uri');
+      if (uri.scheme == 'sepatufutsal' && uri.host == 'connect') {
+        final status = uri.queryParameters['status'];
+        
+        // Dismiss loading dialog if active
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+
+        if (status == 'success') {
+          await SecureStorage.setWalletConnected(true);
+          if (mounted) {
+            setState(() {
+              _isWalletConnected = true;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Berhasil terhubung ke Coach E-Money!'),
+                backgroundColor: AppColors.primary,
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Koneksi dengan Coach E-Money dibatalkan'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      }
+    });
   }
 
   Future<void> _checkBiometricStatus() async {
@@ -125,7 +176,7 @@ class _ProfileTabState extends State<ProfileTab> {
         }
       }
     } else {
-      final bool isInstalled = await canLaunchUrl(Uri.parse('dompetkampus://pay'));
+      final bool isInstalled = await canLaunchUrl(Uri.parse('dompetkampus://connect'));
 
       if (!mounted) return;
 
@@ -180,47 +231,46 @@ class _ProfileTabState extends State<ProfileTab> {
                   onPressed: () async {
                     Navigator.pop(context);
                     if (isInstalled) {
-                      // Open the e-money app via deep link
-                      await launchUrl(Uri.parse('dompetkampus://pay'), mode: LaunchMode.externalApplication);
+                      final connectUri = Uri.parse('dompetkampus://connect').replace(
+                        queryParameters: {
+                          'merchant_id': 'TOKO_SEPATU_KU',
+                          'merchant_name': 'Sepatu Ku',
+                          'callback': 'sepatufutsal://connect',
+                        },
+                      );
                       
-                      // Simulate loading and connect
+                      // Launch the e-money app via deep link
+                      await launchUrl(connectUri, mode: LaunchMode.externalApplication);
+                      
+                      if (!mounted) return;
+                      
+                      // Show loading dialog waiting for confirmation
                       showDialog(
                         context: this.context,
-                        barrierDismissible: false,
-                        builder: (context) => const Center(
-                          child: Card(
-                            margin: EdgeInsets.all(32),
-                            child: Padding(
-                              padding: EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  CircularProgressIndicator(color: AppColors.primary),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    'Menghubungkan ke Coach E-Money...',
-                                    style: TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
+                        barrierDismissible: true,
+                        builder: (context) => AlertDialog(
+                          content: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const CircularProgressIndicator(color: AppColors.primary),
+                                const SizedBox(height: 24),
+                                const Text(
+                                  'Menunggu Konfirmasi',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Silakan lakukan verifikasi keamanan di aplikasi Coach E-Money Anda.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       );
-                      await Future.delayed(const Duration(seconds: 2));
-                      if (this.mounted) {
-                        Navigator.pop(this.context);
-                        await SecureStorage.setWalletConnected(true);
-                        setState(() {
-                          _isWalletConnected = true;
-                        });
-                        ScaffoldMessenger.of(this.context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Berhasil terhubung ke Coach E-Money!'),
-                            backgroundColor: AppColors.primary,
-                          ),
-                        );
-                      }
                     } else {
                       // Suggest download - redirect to Play Store search or mock download page
                       await launchUrl(

@@ -32,6 +32,12 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="sepatufutsal" android:host="checkout" />
             </intent-filter>
+            <intent-filter android:label="connect_callback">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sepatufutsal" android:host="connect" />
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
