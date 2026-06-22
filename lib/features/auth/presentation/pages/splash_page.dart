@@ -72,20 +72,21 @@ class _SplashPageState extends State<SplashPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppColors.primary.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.sports_soccer,
-                size: 80,
-                color: AppColors.primary,
+              child: Image.asset(
+                'assets/icons/sepatu-ku.png',
+                width: 80,
+                height: 80,
+                fit: BoxFit.contain,
               ),
             ),
             const SizedBox(height: 24),
             const Text(
-              'Sepatu Futsal Store',
+              'Sepatu Ku Store',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -95,7 +96,7 @@ class _SplashPageState extends State<SplashPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Aplikasi E-Commerce Sepatu Futsal Terbaik',
+              'Aplikasi E-Commerce Sepatu Terbaik',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey.shade500,

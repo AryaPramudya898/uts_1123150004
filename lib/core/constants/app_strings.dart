@@ -1,6 +1,6 @@
 class AppStrings {
   // App
-  static const String appName = 'Sepatu Futsal';
+  static const String appName = 'Sepatu Ku';
 
   // Auth
   static const String register = 'Daftar';
