@@ -68,6 +68,19 @@ class _ProfileTabState extends State<ProfileTab> {
               ),
             );
           }
+        } else if (status == 'disconnected') {
+          await SecureStorage.setWalletConnected(false);
+          if (mounted) {
+            setState(() {
+              _isWalletConnected = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Koneksi dengan Coach E-Money telah diputuskan'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         } else {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
