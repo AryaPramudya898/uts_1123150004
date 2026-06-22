@@ -11,6 +11,7 @@ import 'package:uts_1123150004/features/cart/data/models/cart_item_model.dart';
 import '../providers/cart_provider.dart';
 import 'payment_success_page.dart';
 import 'package:uts_1123150004/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:uts_1123150004/core/services/notification_service.dart';
 
 class CheckoutPage extends StatefulWidget {
   final Map<String, dynamic>? pendingTransaction;
@@ -117,6 +118,17 @@ class _CheckoutPageState extends State<CheckoutPage> with WidgetsBindingObserver
       } catch (e) {
         debugPrint('[CheckoutPage] Gagal update status transaksi ke backend: $e');
       }
+    }
+
+    // Tampilkan notifikasi lokal pembayaran berhasil
+    try {
+      await NotificationService.showNotification(
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title: 'Pembayaran Berhasil',
+        body: 'Pembayaran berhasil menggunakan Coach E-Money.',
+      );
+    } catch (e) {
+      debugPrint('[CheckoutPage] Gagal memicu notifikasi lokal: $e');
     }
 
     if (!mounted) return;
